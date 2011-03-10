@@ -13,10 +13,12 @@
 /*
  * this function filters all the other colors except variations of red
  *
- * processedPixels : stores the processed pixels.
+ * pixels : RGB pixels of the image
+ *
+ * processedPixels : stores the processed pixels in grayscale format with blue and green pixels thrown away.
  *
  */
-void filter(unsigned char *pixels, unsigned char *processedPixels, int numPixels);
+void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int width, unsigned int height);
 
 
 #endif /* VIDEO_H_ */

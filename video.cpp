@@ -8,11 +8,14 @@
 #include "video.h"
 #include "math.h"
 
-void filter(unsigned char *pixels, unsigned char *processedPixels, int numPixels) {
+#include <stdio.h>
+
+void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int width, unsigned int height){
 
     int i;
 
-    for(i = 0; i < numPixels; i+=3) {
+    unsigned int totalPixels = sizeof(unsigned char) * width * height * 3;
+    for(i = 0; i < totalPixels; i+=3) {
 
         int r = pixels[i];
         int g = pixels[i + 1];
@@ -31,11 +34,12 @@ void filter(unsigned char *pixels, unsigned char *processedPixels, int numPixels
             g = 0;
             b = 0;
         }
-        processedPixels[i] = (unsigned char)r;
-        processedPixels[i+1] = (unsigned char)g;
-        processedPixels[i+2] = (unsigned char)b;
+        int shift = i / 3;
+        int row = shift / width;
+        int col =  shift % width;
 
-    }
+        processedPixels[row][col] = (unsigned char)b;
+    }   
 }
 
 

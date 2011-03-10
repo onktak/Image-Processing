@@ -7,14 +7,16 @@
 #include "SDL/SDL.h"
 #include "frame.h"
 #include "video.h"
+#include "two_pass.h"
 
-
-#define NUMBER_OF_FRAMES 100
 #define END_DELAY 200
 
 
 #define BOX_WIDTH 100
 #define BOX_HEIGHT 100
+
+#define FRAME_HEIGHT 480
+#define FRAME_WIDTH  640
 
 
 SDL_Surface *frame = NULL;
@@ -30,7 +32,7 @@ void apply_surface( int x, int y, SDL_Surface* source, SDL_Surface* destination 
 SDL_Surface* create_cam_img (unsigned char *pixels, int w, int h);
 static void mainloop (void);
 
-void process_video(unsigned char *pixels, unsigned char *processedPixels, int numPixels);
+void process_video(unsigned char *pixels, unsigned char **processedPixels);
 
 
 int main (int argc, char **argv) {
@@ -104,8 +106,13 @@ SDL_Surface* create_cam_img (unsigned char *pixels, int w,int h)
 
 static void mainloop (void) {
 
-    unsigned int numPixels = sizeof(unsigned char) * 640 * 480 * 3;
-    unsigned char processedPixels[numPixels];
+    int i,j;
+
+    unsigned char **processedPixels;
+    processedPixels = (unsigned char**)malloc(FRAME_HEIGHT * sizeof(unsigned char*));
+    for(i = 0; i < FRAME_HEIGHT; i++) {
+        processedPixels[i] = (unsigned char*)malloc(FRAME_WIDTH * sizeof(unsigned char));
+    }
 
     for (;;) {
         fd_set fds;
@@ -144,9 +151,47 @@ static void mainloop (void) {
                }
              */
             // process the video
-            process_video(pixels, processedPixels,numPixels);
+            process_video(pixels, processedPixels);
 
-            frame = create_cam_img(processedPixels, 640, 480);
+            int **labels;
+            labels = (int **)malloc(sizeof(int *) * FRAME_HEIGHT);
+            for(i = 0; i < FRAME_HEIGHT; i++) {
+                labels[i] = (int *)malloc(sizeof(int) * FRAME_WIDTH);
+                for(j = 0; j < FRAME_WIDTH; j++) {
+                    labels[i][j] = -1;
+                }
+            }
+
+            two_pass(processedPixels, labels, FRAME_WIDTH, FRAME_HEIGHT);
+            
+            for(i = 0; i < 80;i++) {
+                for(j = 0; j < 80; j++) {
+                    if(labels[i][j] != -1)  {
+                        printf("%d", labels[i][j]);
+                    } else {
+                        printf("-");
+                    }
+                }
+                printf("\n");
+            }
+            
+            for(i = 0; i < FRAME_HEIGHT; i++) {
+                free(labels[i]);
+            }
+            free(labels);
+
+            // convert grayscale processed pixels to an RGB format
+            for(i = 0; i < FRAME_HEIGHT *  FRAME_WIDTH * 3; i+=3) {
+                int shift = i / 3;            	
+                int row = shift / FRAME_WIDTH;
+                int col = shift % FRAME_WIDTH;
+
+                pixels[i] = 0; // red;
+                pixels[i + 1] = 0; // green
+                pixels[i + 2] = processedPixels[row][col];
+            }
+
+            frame = create_cam_img(pixels, 640, 480);
 
             apply_surface(0, 0, frame, screen);
 
@@ -154,9 +199,9 @@ static void mainloop (void) {
         }
     }
 }
-void process_video(unsigned char *pixels, unsigned char *processedPixels, int numPixels) {
+void process_video(unsigned char *pixels, unsigned char **processedPixels) {
 
-    filter(pixels, processedPixels, numPixels);
+    filter(pixels, processedPixels, FRAME_WIDTH, FRAME_HEIGHT);
 }
 
 

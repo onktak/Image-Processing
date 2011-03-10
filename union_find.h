@@ -88,5 +88,6 @@ template<class T> void ListSet<T>::Union (long s1, long s2) {
     (set1->tl)->next = set2->hd;
     set1->tl = set2->tl;
     delete set2;
+
 }
 
