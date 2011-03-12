@@ -11,30 +11,56 @@
 #include "union_find.h"
 
 /*--------------------------------------- PRIVATE PROTOTYPES ------------------------------------------*/
-void first_pass(unsigned char **pixels, int **labels, int width, int height, long *linked);
+
+/*
+ * returns the number of blobs before continuous regions are merged
+ */
+int first_pass(unsigned char **pixels, int **labels, int width, int height, long *linked);
 void second_pass(unsigned char **pixels, int **labels, int width, int height, long *linked);
 
 /*
+ * return the number of blobs found
+ *
  * implementation of the two-pass algorithm for blob detection
  * Utilises 8-connectivity to determine neighbours.
  *
  */
 
-void two_pass(unsigned char **pixels, int **labels, int width, int height) {
+int two_pass(unsigned char **pixels, int **labels, int width, int height) {
 
     long *linked = (long *)malloc(width * height * sizeof(long));
 
 
     // go first pass
-    first_pass(pixels, labels, width, height, linked);
+    int numBeforeMerge = first_pass(pixels, labels, width, height, linked);
     // second pass
     second_pass(pixels, labels, width, height, linked);
-
+    
+    int i, j;
+    int *blobLabels = (int *)malloc( numBeforeMerge * sizeof(int));
+    int labelsAdded = 0;
+    for(i = 0; i < numBeforeMerge; i++) {
+    	int found = 0;
+    	for(j = 0; j < labelsAdded; j++) {
+    		if(blobLabels[j] == i) {
+    			found = 1;
+    			break;
+    		}
+    	}
+    	if(!found) {
+    		blobLabels[labelsAdded] = i;
+    		labelsAdded++;
+    	}
+    }
+    
+    free(blobLabels);
     free(linked);
+    
+    return labelsAdded;
 
 }
 
-void first_pass(unsigned char **pixels, int **labels, int width, int height, long *linked) {
+int first_pass(unsigned char **pixels, int **labels, int width, int height, long *linked) {
 
     int i, j;
     // first pass
@@ -119,18 +145,7 @@ void first_pass(unsigned char **pixels, int **labels, int width, int height, lon
             } 
         }
     } 
-    
-    for(i = 0; i < nextLabel; i++) {
-        ListSet<int> newUnionList;
-        long start = newUnionList.head(linked[i]);
-        long total  = 0;
-        while(start != 0) {
-            total++;
-            start = newUnionList.nextNode(start);
-        }
-        printf("(%d, %ld)  \n", i, total);
-
-    }
+ 	return nextLabel;
     
 }
 

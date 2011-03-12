@@ -12,8 +12,8 @@
 #define END_DELAY 200
 
 
-#define BOX_WIDTH 100
-#define BOX_HEIGHT 100
+#define BOX_WIDTH 10
+#define BOX_HEIGHT 10
 
 #define FRAME_HEIGHT 480
 #define FRAME_WIDTH  640
@@ -151,34 +151,7 @@ static void mainloop (void) {
                }
              */
             // process the video
-            process_video(pixels, processedPixels);
-
-            int **labels;
-            labels = (int **)malloc(sizeof(int *) * FRAME_HEIGHT);
-            for(i = 0; i < FRAME_HEIGHT; i++) {
-                labels[i] = (int *)malloc(sizeof(int) * FRAME_WIDTH);
-                for(j = 0; j < FRAME_WIDTH; j++) {
-                    labels[i][j] = -1;
-                }
-            }
-
-            two_pass(processedPixels, labels, FRAME_WIDTH, FRAME_HEIGHT);
-            
-            for(i = 0; i < 80;i++) {
-                for(j = 0; j < 80; j++) {
-                    if(labels[i][j] != -1)  {
-                        printf("%d", labels[i][j]);
-                    } else {
-                        printf("-");
-                    }
-                }
-                printf("\n");
-            }
-            
-            for(i = 0; i < FRAME_HEIGHT; i++) {
-                free(labels[i]);
-            }
-            free(labels);
+            process_video(pixels, processedPixels);        
 
             // convert grayscale processed pixels to an RGB format
             for(i = 0; i < FRAME_HEIGHT *  FRAME_WIDTH * 3; i+=3) {
@@ -190,7 +163,33 @@ static void mainloop (void) {
                 pixels[i + 1] = 0; // green
                 pixels[i + 2] = processedPixels[row][col];
             }
+            // process blobs
+            int **labels;
+            labels = (int **)malloc(sizeof(int *) * FRAME_HEIGHT);
+            for(i = 0; i < FRAME_HEIGHT; i++) {
+                labels[i] = (int *)malloc(sizeof(int) * FRAME_WIDTH);
+                for(j = 0; j < FRAME_WIDTH; j++) {
+                    labels[i][j] = -1;
+                }
+            }
 
+            int numBlobs = two_pass(processedPixels, labels, FRAME_WIDTH, FRAME_HEIGHT);
+            blob *blobs = (blob *) malloc(sizeof(blob) * numBlobs);
+    		extract_blobs(blobs, numBlobs, labels, FRAME_WIDTH, FRAME_HEIGHT);
+            
+            printf("num blobs : %d\n", numBlobs);
+            
+            for(i = 0; i < FRAME_HEIGHT; i++) {
+                free(labels[i]);
+            }
+            free(labels);
+            for(i = 0; i < numBlobs; i++) {
+            	if(blobs[i].numPoints != 0) {
+            		coord c = blobs[i].points[0];
+            		draw_box(pixels, c.x, c.y, BOX_WIDTH, BOX_HEIGHT);
+            	}
+            }            
+            
             frame = create_cam_img(pixels, 640, 480);
 
             apply_surface(0, 0, frame, screen);
