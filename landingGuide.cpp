@@ -150,9 +150,10 @@ static void mainloop (void) {
                draw_box(pixels, xBox, yBox, BOX_WIDTH, BOX_HEIGHT, FALSE);
                }
              */
+        
             // process the video
             process_video(pixels, processedPixels);        
-
+            
             // convert grayscale processed pixels to an RGB format
             for(i = 0; i < FRAME_HEIGHT *  FRAME_WIDTH * 3; i+=3) {
                 int shift = i / 3;            	
@@ -174,22 +175,31 @@ static void mainloop (void) {
             }
 
             int numBlobs = two_pass(processedPixels, labels, FRAME_WIDTH, FRAME_HEIGHT);
+            
             blob *blobs = (blob *) malloc(sizeof(blob) * numBlobs);
     		extract_blobs(blobs, numBlobs, labels, FRAME_WIDTH, FRAME_HEIGHT);
-            
-            printf("num blobs : %d\n", numBlobs);
-            
-            for(i = 0; i < FRAME_HEIGHT; i++) {
+    		// done with labels
+    		for(i = 0; i < FRAME_HEIGHT; i++) {
                 free(labels[i]);
             }
-            free(labels);
+            free(labels);            
+    		printf("num blobs 1: %d\n", numBlobs); 
+    		
+    		// remove too small/big blobs
+    		numBlobs = apply_blob_size_heuristic(blobs, numBlobs);
+    		printf("num blobs 2: %d\n", numBlobs); 
+    		
+    		shape sh;
+    		get_shape(blobs, numBlobs, sh);           
+           
             for(i = 0; i < numBlobs; i++) {
-            	if(blobs[i].numPoints != 0) {
-            		coord c = blobs[i].points[0];
+            	if(blobs[i].numPoints > 4) {
+            		coord c = get_blob_center(blobs[i]);
             		draw_box(pixels, c.x, c.y, BOX_WIDTH, BOX_HEIGHT);
             	}
             }            
-            
+           
+            free_blobs(blobs, numBlobs);
             frame = create_cam_img(pixels, 640, 480);
 
             apply_surface(0, 0, frame, screen);
@@ -200,7 +210,7 @@ static void mainloop (void) {
 }
 void process_video(unsigned char *pixels, unsigned char **processedPixels) {
 
-    filter(pixels, processedPixels, FRAME_WIDTH, FRAME_HEIGHT);
+   filter(pixels, processedPixels, FRAME_WIDTH, FRAME_HEIGHT);
 }
 
 

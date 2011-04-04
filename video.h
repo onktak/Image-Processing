@@ -6,7 +6,7 @@
  *  system.
  *
  */
- 
+
 
 #ifndef VIDEO_H_
 #define VIDEO_H_
@@ -14,7 +14,7 @@
 #define max(a, b)  (((a) > (b)) ? (a) : (b)) 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
 
- typedef struct {
+typedef struct {
     int x;
     int y;
 } coord;
@@ -27,6 +27,16 @@ typedef struct {
     int size; // keep track of memory allocated to blob
 } blob;
 
+/*
+ * stores the coordinates of the 'cross' shape used to identify the pattern
+ */
+typedef struct {
+    coord center;
+	coord head;
+	coord tail;
+	coord left;
+	coord right;
+} shape;
 
 /*
  * this function filters all the other colors except variations of red
@@ -39,6 +49,16 @@ typedef struct {
 void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int width, unsigned int height);
 
 /*
+ * this function retrieves the 'cross' shape from the blobs 
+ *
+ * return 1 if the shape is found else 0
+ *
+ * shp : the shape struct to store the cross coordinates *
+ *
+ */
+int get_shape(blob *blobs, int numBlobs, shape shp);
+
+/*
  * blobs : an array to store the blobs in, 
  * numBlobs : the number of blobs to extract
  * blob labels : 2D array containing the blobs labels
@@ -48,6 +68,23 @@ void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int
  */
 
 void extract_blobs(blob *blobs, int numBlobs, int **blobLabels, int width, int height);
+
+/*
+ * this function removes blobs that are too big or too small 
+ *
+ * return the number of blobs left with the blobs array updated correctly.
+ */
+ int apply_blob_size_heuristic(blob *blobs, int numBlobs); 
+
+/*
+ *  return the center coordinates of a blob
+ */
+coord get_blob_center(blob blob);
+
+/*
+ * free memory used by the blobs
+ */ 
+ void free_blobs(blob *blobs, int numBlobs);
 
 void draw_box(unsigned char *frame, int x, int y, int w, int h);
 

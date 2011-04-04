@@ -11,6 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/*---------------------------------------------  PRIVATE FUNCTIONS -----------------------------------------*/
+double gradient(coord p1, coord p2);
+double distance(coord p1, coord p2);
+//bool findLongSide(coord refPoint, coord *point1, coord *point2, vector<coord> points, double errorRate);
+/*----------------------------------------------------------------------------------------------------------*/
+
 void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int width, unsigned int height){
 
     int i;
@@ -23,14 +29,15 @@ void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int
         int b = pixels[i + 2];
 
         int db = (b - 255) * (b - 255);
-        int dg = (g * g);
-        int dr = (r * r);
+        int dg = (g - 255) * (g - 255);
+        int dr = (r - 255) * (r - 255);
 
         double deltaSum = dr + dg + db;
 
         double distance = sqrt(deltaSum);
-
-        if(distance > 150) {
+        
+       // printf("%d %d %d %f\n", r, g, b, distance);
+        if(distance > 10) {
             r = 0;
             g = 0;
             b = 0;
@@ -42,14 +49,24 @@ void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int
         processedPixels[row][col] = (unsigned char)b;
     }   
 }
-/*
- * blobs : an array to store the blobs in, 
- * numBlobs : the number of blobs to extract
- * blob labels : 2D array containing the blobs labels
- *             : each blob has unique label
- * width : width for the blob labels array
- * height : height for the blob labels array
- */
+
+int get_shape(blob *blobs, int numBlobs, shape shp) {
+
+	int i;
+	
+	coord *centerCoords = (coord*)malloc(sizeof(coord) * numBlobs);	
+	for(i = 0; i < numBlobs; i++) {
+		//centerCoords[i] = get_blob_center(blobs[i]);	
+		//printf("(%d,%d) ", centerCoords[i].x, centerCoords[i].y);	
+		printf("%d ", blobs[i].numPoints);
+	}
+	printf("\n");
+	
+	// free memory
+	free(centerCoords); 
+		
+	return 0;
+}
 
 void extract_blobs(blob *blobs, int numBlobs, int **blobLabels,
         int width, int height) {
@@ -87,6 +104,58 @@ void extract_blobs(blob *blobs, int numBlobs, int **blobLabels,
       }   
     }
 }
+int apply_blob_size_heuristic(blob *blobs, int numBlobs) {
+	int i;
+	for(i = 0; i < numBlobs; i++) {
+		// numbers choosen arbitrarily from analysis
+		if(blobs[i].numPoints < 20 || blobs[i].numPoints > 450) {
+			// remove this small/big blob
+			free(blobs[i].points);
+			
+			blobs[i].points = blobs[numBlobs - 1].points;
+			blobs[i].numPoints = blobs[numBlobs - 1].numPoints;
+			blobs[i].size = blobs[numBlobs - 1].size;
+			
+			numBlobs--;   			
+			i--;
+			
+		} 		  		
+	}
+	return numBlobs;	 
+}
+void free_blobs(blob *blobs, int numBlobs) {
+	int i;
+	 // free the points first
+	 for(i = 0; i < numBlobs; i++) {       
+        free(blobs[i].points);       
+    }
+    free(blobs);
+}
+
+coord get_blob_center(blob bl) {
+
+    int i;
+
+    int xSum, ySum;
+    xSum = ySum = 0;
+
+    coord *points = bl.points;
+    
+    for(i = 0; i < bl.numPoints; i++) {
+        xSum += points[i].x;
+        ySum += points[i].y;
+    }
+    printf("%d %d %d\n", xSum, ySum, bl.numPoints);
+    int xCenter = (int)(xSum / bl.numPoints);
+    int yCenter = (int)(ySum / bl.numPoints);
+
+    coord center = {xCenter, yCenter};
+
+    return center;
+}
+
+
+
 void draw_box(unsigned char *frame, int x, int y, int w, int h) {
 	int i;
 	int loc, loc1;
