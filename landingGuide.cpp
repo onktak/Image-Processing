@@ -182,29 +182,36 @@ static void mainloop (void) {
     		for(i = 0; i < FRAME_HEIGHT; i++) {
                 free(labels[i]);
             }
-            free(labels);            
-    		printf("num blobs 1: %d\n", numBlobs); 
+            free(labels); 
     		
     		// remove too small/big blobs
     		numBlobs = apply_blob_size_heuristic(blobs, numBlobs);
-    		printf("num blobs 2: %d\n", numBlobs); 
     		
     		shape sh;
-    		get_shape(blobs, numBlobs, sh);           
-           
-            for(i = 0; i < numBlobs; i++) {
-            	if(blobs[i].numPoints > 4) {
-            		coord c = get_blob_center(blobs[i]);
-            		draw_box(pixels, c.x, c.y, BOX_WIDTH, BOX_HEIGHT);
-            	}
-            }            
-           
+    	
+    		int found = get_shape(blobs, numBlobs, &sh);           
+    		if(found) {
+    			draw_box(pixels, sh.head.x, sh.head.y, BOX_WIDTH, BOX_HEIGHT); 
+    			draw_box(pixels, sh.center.x, sh.center.y, BOX_WIDTH, BOX_HEIGHT); 
+    			draw_box(pixels, sh.tail.x, sh.tail.y, BOX_WIDTH, BOX_HEIGHT); 
+    			draw_box(pixels, sh.left.x, sh.left.y, BOX_WIDTH, BOX_HEIGHT); 
+    			draw_box(pixels, sh.right.x, sh.right.y, BOX_WIDTH, BOX_HEIGHT); 
+    			/*
+    			frame = create_cam_img(pixels, 640, 480);
+            	apply_surface(0, 0, frame, screen);
+            	SDL_Flip(screen); */
+    		}
+    		/*
+    		for(i = 0; i < 9; i++) {
+    			draw_box(pixels, coords[i].x, coords[i].y, BOX_WIDTH, BOX_HEIGHT); 
+    		}
+    		*/
             free_blobs(blobs, numBlobs);
+            
             frame = create_cam_img(pixels, 640, 480);
-
-            apply_surface(0, 0, frame, screen);
-
-            SDL_Flip(screen);
+        	apply_surface(0, 0, frame, screen);
+        	SDL_Flip(screen);
+           
         }
     }
 }

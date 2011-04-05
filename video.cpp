@@ -6,7 +6,9 @@
  */
 
 #include "video.h"
-#include "math.h"
+
+#include <math.h>
+#include <limits.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +16,15 @@
 /*---------------------------------------------  PRIVATE FUNCTIONS -----------------------------------------*/
 double gradient(coord p1, coord p2);
 double distance(coord p1, coord p2);
-//bool findLongSide(coord refPoint, coord *point1, coord *point2, vector<coord> points, double errorRate);
+/*
+ * return 1 if long side with 3 collinear points and distance ratio of 1:2 is found else 0
+ */
+int findLongSide(coord refPoint, coord *point1, coord *point2, coord *points, int numPoints, double errorRate);
+/*
+ * return 1 if side with 3 collinear points and distance ratio of 1:1 is found else 0
+ */
+int findShortSide(coord refPoint, double dist, coord *point1, coord *point2, 
+						  coord *points, int numPoints, double errorRate);
 /*----------------------------------------------------------------------------------------------------------*/
 
 void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int width, unsigned int height){
@@ -50,22 +60,54 @@ void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int
     }   
 }
 
-int get_shape(blob *blobs, int numBlobs, shape shp) {
+int get_shape(blob *blobs, int numBlobs, shape *sh) {
 
 	int i;
 	
 	coord *centerCoords = (coord*)malloc(sizeof(coord) * numBlobs);	
 	for(i = 0; i < numBlobs; i++) {
-		//centerCoords[i] = get_blob_center(blobs[i]);	
+		centerCoords[i] = get_blob_center(blobs[i]);	
 		//printf("(%d,%d) ", centerCoords[i].x, centerCoords[i].y);	
-		printf("%d ", blobs[i].numPoints);
+		
 	}
-	printf("\n");
+	double PERCENTAGE_ERROR = 0.1;
 	
+	coord center, top, bottom, left, right;
+	int shapeFound = 0;
+	int count = 0;
+	int num = 0;
+	for(i = 0; i < numBlobs; i++) {
+		center = centerCoords[i];		
+		int longSideFound = findLongSide(center, &top, &bottom, centerCoords, numBlobs, PERCENTAGE_ERROR);
+		if(longSideFound) {		
+			
+			// find the short segment				
+			double d =  distance(center, top);
+		
+			int shortSideFound = findShortSide(center, d, &left, &right, centerCoords, numBlobs, PERCENTAGE_ERROR);
+			if(shortSideFound) {
+				printf("shape found----------------------!!!!!\n");
+				shapeFound = 1;	
+				break;		
+			}
+		} 
+	}
 	// free memory
 	free(centerCoords); 
 		
-	return 0;
+	if(shapeFound) {
+			
+		sh->head.x = top.x; sh->head.y = top.y;
+		sh->center.x = center.x; sh->center.y = center.y;
+		sh->tail.x = bottom.x; sh->tail.y = bottom.y;
+		sh->left.x = left.x; sh->left.y = left.y;
+		sh->right.x = right.x; sh->right.y = right.y;
+		
+		return 1;
+		
+	} else {
+		return 0;
+	}
 }
 
 void extract_blobs(blob *blobs, int numBlobs, int **blobLabels,
@@ -108,7 +150,7 @@ int apply_blob_size_heuristic(blob *blobs, int numBlobs) {
 	int i;
 	for(i = 0; i < numBlobs; i++) {
 		// numbers choosen arbitrarily from analysis
-		if(blobs[i].numPoints < 20 || blobs[i].numPoints > 450) {
+		if(blobs[i].numPoints < 20) {
 			// remove this small/big blob
 			free(blobs[i].points);
 			
@@ -145,7 +187,7 @@ coord get_blob_center(blob bl) {
         xSum += points[i].x;
         ySum += points[i].y;
     }
-    printf("%d %d %d\n", xSum, ySum, bl.numPoints);
+    
     int xCenter = (int)(xSum / bl.numPoints);
     int yCenter = (int)(ySum / bl.numPoints);
 
@@ -197,4 +239,103 @@ void draw_box(unsigned char *frame, int x, int y, int w, int h) {
 	}
 }
 
+int findLongSide(coord refPoint, coord *point1, coord *point2, coord *points, int numPoints, double errorRate) {
+
+    coord p1, p2;
+    int j, k;
+	for(j = 0; j < numPoints; j++) {	
+		p1 = points[j];
+		if(p1.x == refPoint.x && p1.y == refPoint.y) {
+			continue;
+		} else {				
+			double d1 = distance(refPoint, p1);
+			double m1 = gradient(refPoint, p1);
+			// find another point with gradient = m1 and distance = 2 * d1 from refPoint				
+			for(k = 0; k < numPoints; k++) {
+				p2 = points[k];
+				double d2 = distance(refPoint, p2);
+				double distanceSum = d1 + d2;
+				
+				// account for some error
+				if(fabs(distanceSum - distance(p1, p2)) <= fabs(errorRate * distanceSum)) {						
+
+					double m2 = gradient(refPoint, p2);
+					if(fabs(m1 - m2) <= fabs(errorRate * m1)) {						
+						
+						if(fabs(d1 - (2 * d2)) <= fabs(errorRate * d1)) {																
+							// shorter distance always first
+							point1->x = p2.x; point1->y = p2.y;
+							point2->x = p1.x; point2->y = p1.y;
+							
+							return 1;
+							
+						} else if(fabs((2 * d1) - d2) <= fabs(errorRate * d2)) {
+							point1->x = p1.x; point1->y = p1.y;
+							point2->x = p2.x; point2->y = p2.y;
+							
+							return 1;
+						}
+					}
+				}				
+			}
+
+		} // end else
+	}
+	return 0;
+}
+int findShortSide(coord refPoint, double dist, coord *point1, coord *point2, 
+						  coord *points, int numPoints, double errorRate) {
+
+    coord p1, p2;
+    int j, k;
+	for(j = 0; j < numPoints; j++) {	
+		p1 = points[j];
+		if(p1.x == refPoint.x && p1.y == refPoint.y) {
+			continue;
+		} else {				
+			double d1 = distance(refPoint, p1);
+			double m1 = gradient(refPoint, p1);
+			// find another point with gradient = m1 and distance = d1 from refPoint				
+			for(k = 0; k < numPoints; k++) {
+				p2 = points[k];
+				if((p2.x == refPoint.x && p2.y == refPoint.y) || (p2.x == p1.x && p2.y == p1.y)) {
+					continue;
+				} else {
+					double d2 = distance(refPoint, p2);				
+				
+					// make sure the points are collinear
+					double m2 = gradient(refPoint, p2);
+					if(fabs(m1 - m2) <= fabs(errorRate * m1)) {						
+					
+						if((fabs(d1 - dist) <= fabs(errorRate * d1)) && (fabs(d2 - dist) <= fabs(errorRate * d2))) {			
+							point1->x = p1.x; point1->y = p1.y;
+							point2->x = p2.x; point2->y = p2.y;
+					
+							return 1;							
+						}						
+					}	
+				}			
+			}
+		} // end else
+	}
+	return 0;
+
+}
+double gradient(coord p1, coord p2) {
+	int deltaY = p1.y - p2.y;
+	int deltaX = p1.x - p2.x;
+
+	if(deltaX == 0) {
+		return INT_MAX;
+	} else {
+		return (deltaY * 1.0 / deltaX * 1.0);
+	}	
+}
+double distance(coord p1, coord p2) {
+	double deltaY = p1.y - p2.y;
+	double deltaX = p1.x - p2.x;
+
+	return (sqrt((deltaY * deltaY) + (deltaX * deltaX)));
+
+}
 

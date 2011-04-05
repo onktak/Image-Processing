@@ -56,7 +56,7 @@ void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int
  * shp : the shape struct to store the cross coordinates *
  *
  */
-int get_shape(blob *blobs, int numBlobs, shape shp);
+int get_shape(blob *blobs, int numBlobs, shape *shp);
 
 /*
  * blobs : an array to store the blobs in, 
