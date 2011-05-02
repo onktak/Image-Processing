@@ -20,6 +20,12 @@ typedef struct {
 } coord;
 
 typedef struct {
+	int x;
+	int y;
+	int z;
+} coord3D;
+
+typedef struct {
     // arrray to store the number of points 
     // making the blob
     coord *points;  
@@ -27,16 +33,19 @@ typedef struct {
     int size; // keep track of memory allocated to blob
 } blob;
 
+typedef struct {
+	coord point1;
+	coord point2;
+	coord point3;	
+} collinear;
+
 /*
  * stores the coordinates of the 'cross' shape used to identify the pattern
  */
 typedef struct {
-    coord center;
-	coord head;
-	coord tail;
-	coord left;
-	coord right;
-} shape;
+ 	collinear line1;
+ 	collinear line2;
+} cross;
 
 /*
  * this function filters all the other colors except variations of red
@@ -56,7 +65,7 @@ void filter(unsigned char *pixels, unsigned char **processedPixels, unsigned int
  * shp : the shape struct to store the cross coordinates *
  *
  */
-int get_shape(blob *blobs, int numBlobs, shape *shp);
+/* int get_shape(blob *blobs, int numBlobs, shape *shp); */
 
 /*
  * blobs : an array to store the blobs in, 
@@ -87,6 +96,17 @@ coord get_blob_center(blob blob);
  void free_blobs(blob *blobs, int numBlobs);
 
 void draw_box(unsigned char *frame, int x, int y, int w, int h);
+
+int get_collinear_points(blob *blobs, int numBlobs, collinear** linear);
+int get_intersecting_collinear_points( collinear** linear, int numPoints, cross *crosses);
+int get_crosses( collinear** linear, int numPoints, cross *crosses); 
+
+int get_collinear_points(blob *blobs, int numBlobs, collinear** linear);
+
+int get_more_straight_sides(blob *blobs, int numBlobs, collinear* linear);
+void print_point(coord co);
+double gradient(coord p1, coord p2);
+double distance(coord p1, coord p2);
 
 
 #endif /* VIDEO_H_ */
