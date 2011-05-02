@@ -103,6 +103,16 @@ SDL_Surface* create_cam_img (unsigned char *pixels, int w,int h)
     return SDL_CreateRGBSurfaceFrom (pixels,w,h,bpp,pitch,rmask,gmask,bmask,amask);
 
 }
+void draw_collinear(unsigned char *pixels, collinear co) {
+
+	coord p1 = co.point1;
+	coord p2 = co.point2;
+	coord p3 = co.point3;
+
+	draw_box(pixels, p1.x, p1.y, BOX_WIDTH, BOX_HEIGHT); 
+	draw_box(pixels, p2.x, p2.y, BOX_WIDTH, BOX_HEIGHT); 
+	draw_box(pixels, p3.x, p3.y, BOX_WIDTH, BOX_HEIGHT);
+}
 
 static void mainloop (void) {
 
@@ -178,92 +188,66 @@ static void mainloop (void) {
     		
     		// remove too small/big blobs
     		numBlobs = apply_blob_size_heuristic(blobs, numBlobs);
-    		/*
-    		for(i = 0; i < numBlobs; i++) {
-            	printf("%d == ", blobs[i].numPoints);
-            	coord p1 = get_blob_center(blobs[i]);
-            	printf("(%d, %d) %d\n", p1.x, p1.y, blobs[i].numPoints);
-            	draw_box(pixels, p1.x, p1.y, BOX_WIDTH, BOX_HEIGHT); 
-            } 
-    		*/
+    		// get all center points for blobs
+    		coord *centerCoords = (coord*)malloc(sizeof(coord) * numBlobs);
+    		get_blob_centers(blobs, numBlobs, centerCoords);
     		
     		collinear *points = (collinear*)malloc(sizeof(collinear) * numBlobs);
-    		int shortSegments = get_more_straight_sides(blobs, numBlobs, points);
+    		int shortSegments = get_more_straight_sides(centerCoords, numBlobs, points);
     		
     		//printf("points %d, segments %d\n", numBlobs, shortSegments);
     		for(i = 0; i < shortSegments; i++) {    			
 						
 				coord p1 = points[i].point1;
 				coord p2 = points[i].point2;
-				coord p3 = points[i].point3;
-			
-				print_point(p1);
-				print_point(p2);
-				print_point(p3);	
+				coord p3 = points[i].point3;			
+	
 				double m1 = fabs(distance(p1, p2));
 				double m2 = fabs(distance(p2, p3));				
 				double m3 =	fabs(distance(p1, p3));
-				//double d1 = fabs(m1 - m2);
-				//double d2 = fabs(m1 - m3);
-				//double d3 = fabs(m2 - m3);
-				printf(" %f %f %f\n\n", m3/m1, m3/m2, m2/m1);
 				
-				draw_box(pixels, p1.x, p1.y, BOX_WIDTH, BOX_HEIGHT); 
-				draw_box(pixels, p2.x, p2.y, BOX_WIDTH, BOX_HEIGHT); 
-				draw_box(pixels, p3.x, p3.y, BOX_WIDTH, BOX_HEIGHT); 
+								
+				if(is_long_side(points[i])) {
+					collinear shortSide;
+					int shortSideFound = get_short_side(centerCoords, numBlobs, points[i], &shortSide);
+					if(shortSideFound) {			
+						draw_collinear(pixels, shortSide);
+						draw_collinear(pixels, points[i]);
+						
+						print_point(p1);
+						print_point(p2);
+						print_point(p3);
+						printf(" SHORT SIDE \n");	
+						print_point(shortSide.point1);
+						print_point(shortSide.point2);
+						print_point(shortSide.point3);
+						printf("\n");	
+						
+						
+					}
+				} else if(is_short_side(points[i])) {
+					collinear longSide;
+					int longSideFound = get_long_side(centerCoords, numBlobs, points[i], &longSide);
+					if(longSideFound) {					
+						draw_collinear(pixels, longSide);
+						draw_collinear(pixels, points[i]);
+						
+						print_point(p1);
+						print_point(p2);
+						print_point(p3);
+						printf(" LONG SIDE\n");	
+						print_point(longSide.point1);
+						print_point(longSide.point2);
+						print_point(longSide.point3);
+						printf("\n");	
+						
+						
+					}
+				} 
     		}
-    		
-    		/*
-    		cross *crosses;
-    		int numCollinearPoints = get_collinear_points(blobs, numBlobs, points);
-    		
-    		int intersectionPoints = get_intersecting_collinear_points(points, numCollinearPoints, crosses);
-    		printf("collinear points %d intersecting points %d\n", numCollinearPoints, intersectionPoints);
-    		for(i = 0; i < intersectionPoints; i++) {
-					printf("(%d %d), (%d %d), (%d %d)--- \n", points[i]->point1.x, 
-					points[i]->point1.y, points[i]->point2.x, points[i]->point2.y,
-						points[i]->point3.x, points[i]->point3.y);
-				 //coord p1 = get_blob_center(blobs[i]);
-            	//printf("(%d, %d) %d (%d, %d)\n", p1.x, p1.y, blobs[i].numPoints, points[i]->point1.x, points[i]->point1.y);
-				//printf("(%d, %d) %d linear %d\n", x, y, blobs[i].numPoints, numCollinearPoints);
-            	//draw_box(pixels, x, y, BOX_WIDTH, BOX_HEIGHT); 
-            	coord p1 = points[i]->point1;
-				coord p2 = points[i]->point2;
-				coord p3 = points[i]->point3;
-				
-				draw_box(pixels, p1.x, p1.y, BOX_WIDTH, BOX_HEIGHT); 
-				draw_box(pixels, p2.x, p2.y, BOX_WIDTH, BOX_HEIGHT); 
-				draw_box(pixels, p3.x, p3.y, BOX_WIDTH, BOX_HEIGHT); 
-				
-			}
-			*/
-    		//int intersectionPoints = get_intersecting_collinear_points(points, numCollinearPoints);
-    		/*
-    		if(numCollinearPoints > 0) {
-    		
-				int largestPossiblePoints = numCollinearPoints * numCollinearPoints;
-				cross *crosses = (cross*)malloc(sizeof(cross*) * largestPossiblePoints);
-				//int numCrosses = get_intersecting_collinear_points(points, numCollinearPoints, crosses);
-				int numCrosses = 0;
-		
-				for(i = 0; i < numCollinearPoints; i++) {
-					printf("%d %d %d (%d %d), (%d %d), (%d %d)--- \n", numCrosses, numCollinearPoints, numBlobs, points[i]->point1.x, 
-					points[i]->point1.y, points[i]->point2.x, points[i]->point2.y,
-						points[i]->point3.x, points[i]->point3.y);
-					coord p1 = points[i]->point1;
-					coord p2 = points[i]->point2;
-					coord p3 = points[i]->point3;
-					
-				    //if(p1.x < 640 && p2.x < 640 && p3.x < 640 && p1.y  < 480 && p2.y < 480 && p3.y < 480
-				    //	&& p1.x >= 0 && p2.x >= 0 && p3.x  >= 0 && p1.y >= 0 && p2.y  >= 0 && p3.y >= 0 ) {
-						draw_box(pixels, p1.x, p1.y, BOX_WIDTH, BOX_HEIGHT); 
-						draw_box(pixels, p2.x, p2.y, BOX_WIDTH, BOX_HEIGHT); 
-						draw_box(pixels, p3.x, p3.y, BOX_WIDTH, BOX_HEIGHT); 
-					//}
-					//break;
-				}
-			}  */  		
+
             free_blobs(blobs, numBlobs);
+            free(centerCoords);
             free(points);
             
             //frame = create_cam_img(pixels, 640, 480);

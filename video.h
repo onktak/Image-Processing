@@ -43,8 +43,8 @@ typedef struct {
  * stores the coordinates of the 'cross' shape used to identify the pattern
  */
 typedef struct {
- 	collinear line1;
- 	collinear line2;
+ 	collinear shortLine;
+ 	collinear longLine;
 } cross;
 
 /*
@@ -99,15 +99,20 @@ void draw_box(unsigned char *frame, int x, int y, int w, int h);
 
 int get_collinear_points(blob *blobs, int numBlobs, collinear** linear);
 int get_intersecting_collinear_points( collinear** linear, int numPoints, cross *crosses);
-int get_crosses( collinear** linear, int numPoints, cross *crosses); 
+//int get_crosses( collinear** linear, int numPoints, cross *crosses); 
 
-int get_collinear_points(blob *blobs, int numBlobs, collinear** linear);
 
-int get_more_straight_sides(blob *blobs, int numBlobs, collinear* linear);
+void get_blob_centers(blob *blobs, int numBlobs, coord* centerCoords);
+int get_more_straight_sides(coord* centerCoords, int numCenters, collinear* linear);
+int get_short_side(coord* centerCoords, int numCenters, collinear linear, collinear *foundPoints); 
+int get_long_side(coord* centerCoords, int numCenters, collinear linear, collinear *foundPoints); 
+
 void print_point(coord co);
 double gradient(coord p1, coord p2);
 double distance(coord p1, coord p2);
 
+int is_long_side(collinear co);
+int is_short_side(collinear co);
 
 #endif /* VIDEO_H_ */
 
