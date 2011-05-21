@@ -17,4 +17,6 @@
  *
  */
 
-int two_pass(unsigned char **pixels, int **labels, int width, int height);
+#include "constants.h"
+
+int two_pass(unsigned char pixels[][FRAME_WIDTH], int labels[][FRAME_WIDTH], int width, int height);
